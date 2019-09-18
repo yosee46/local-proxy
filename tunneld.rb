@@ -10,8 +10,8 @@ url_sockets = Hash.new
 fileno_hash = Hash.new
 
 Thread.start do
-  begin
-    loop do
+  loop do
+    begin
       while tunnels_data = IO.select(tunnels.values.reject { |tunnel| tunnel.closed? }, nil, nil, 1)
         tunnel = tunnels_data[0][0]
         p fileno_hash
@@ -31,9 +31,9 @@ Thread.start do
           end
         end
       end
+    rescue StandardError => e
+      p e
     end
-  rescue StandardError => e
-    p e
   end
 end
 
@@ -55,19 +55,24 @@ while true
         p "tunnel"
 
         unless old_fileno.nil?
-          p "old fileno"
+          p "old tunnel delete process"
+          p "mutexes"
           p mutexes
+          p old_fileno
           mutexes[old_fileno].synchronize do
             begin
+              p "old_tunnels"
+              p tunnels
               old_tunnel = tunnels[old_fileno]
-              tunnels.delete(old_fileno)
-              mutexes.delete(old_fileno)
-              sleep 1
-              old_tunnel.flush
-              old_tunnel.close
+              unless old_tunnel.nil?
+                p "delete fileno"
+                tunnels.delete(old_fileno)
+                old_tunnel.close
+              end
               fileno_hash.delete_if { |k, v|
                 v == old_fileno
               }
+              mutexes.delete(old_fileno)
             rescue StandardError => e
               p e
             end
@@ -84,51 +89,55 @@ while true
       elsif data.start_with?("GET ") and !data.start_with?("GET /nginx_status")
         p data
         p "process get"
-        writable_tunnel = IO.select nil, tunnels.values, nil, 1
-        p "process writable tunnel"
-        return unless tunnel = writable_tunnel[1][0]
-        p "process tunnel"
-        fileno = fileno_hash[tunnel.fileno]
-        mutexes[fileno].synchronize do
-          p "process puts"
-          begin
-            tunnel.puts(data)
-            if IO.select [tunnel], nil, nil, 10
-              p "save socket"
-              p socket
-              url_sockets[fileno] = socket
+        while writable_tunnel = IO.select(nil, tunnels.values, nil, 1)
+          p "process writable tunnel"
+          tunnel = writable_tunnel[1][0]
 
-              loop do
-                datas = []
-                while IO.select [tunnel], nil, nil, 1
-                  datas << tunnel.gets
+          next if tunnel.nil?
+          p "process tunnel"
+          fileno = fileno_hash[tunnel.fileno]
+          mutexes[fileno].synchronize do
+            p "tunnel.puts process"
+            next if tunnel.closed?
+            begin
+              tunnel.puts(data)
+              if IO.select [tunnel], nil, nil, 10
+                p "save socket"
+                p socket
+                url_sockets[fileno] = socket
+
+                loop do
+                  datas = []
+                  while IO.select [tunnel], nil, nil, 1
+                    datas << tunnel.gets
+                  end
+                  next if datas.empty?
+                  data = datas.join
+
+                  if data.start_with?("ping")
+                    tunnel.puts("pong")
+                    next
+                  end
+
+                  p "puts socket to url"
+                  socket.puts(data)
+                  p "close socket after to url"
+                  socket.close()
+                  break
                 end
-                next if datas.empty?
-                data = datas.join
 
-                if data.start_with?("ping")
-                  tunnel.puts("pong")
-                  next
-                end
-
-                p "puts socket to url"
+              else
                 socket.puts(data)
-                p "close socket after to url"
                 socket.close()
-                break
+                p "url socket close"
               end
-
-            else
-              socket.puts(data)
-              socket.close()
-              p "url socket close"
+            rescue StandardError => e
+              p e
             end
-          rescue StandardError => e
-            p e
           end
+          break
         end
       end
-
     rescue StandardError => e
       p e
     end
