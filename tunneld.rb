@@ -18,17 +18,15 @@ Thread.start do
         p tunnel.fileno
         fileno = fileno_hash[tunnel.fileno]
         datas = []
-        mutexes[fileno].synchronize do
-          while IO.select [tunnel], nil, nil, 1
-            datas << tunnel.gets
-          end
-          next if datas.empty?
-          data = datas.join
+        while IO.select [tunnel], nil, nil, 1
+          datas << tunnel.gets
+        end
+        next if datas.empty?
+        data = datas.join
 
-          if data.start_with?("ping")
-            p "ping"
-            tunnel.puts("pong")
-          end
+        if data.chomp.start_with?("ping")
+          p "ping"
+          tunnel.puts("pong")
         end
       end
     rescue StandardError => e
@@ -55,24 +53,14 @@ while true
         p "tunnel"
 
         unless old_fileno.nil?
-          p "old tunnel delete process"
-          p "mutexes"
-          p mutexes
-          p old_fileno
           mutexes[old_fileno].synchronize do
             begin
               p "old_tunnels"
               p tunnels
               old_tunnel = tunnels[old_fileno]
               unless old_tunnel.nil?
-                p "delete fileno"
-                tunnels.delete(old_fileno)
                 old_tunnel.close
               end
-              fileno_hash.delete_if { |k, v|
-                v == old_fileno
-              }
-              mutexes.delete(old_fileno)
             rescue StandardError => e
               p e
             end
@@ -80,6 +68,7 @@ while true
         end
 
         p "new tunnel"
+        p tunnels
         socket.puts("new_tunnel")
         tunnels[fileno] = socket
         fileno_hash[socket.fileno] = fileno
@@ -89,17 +78,18 @@ while true
       elsif data.start_with?("GET ") and !data.start_with?("GET /nginx_status")
         p data
         p "process get"
-        while writable_tunnel = IO.select(nil, tunnels.values, nil, 1)
+        while writable_tunnel = IO.select(nil, tunnels.values.reject { |tunnel| tunnel.closed? }, nil, 1)
           p "process writable tunnel"
           tunnel = writable_tunnel[1][0]
+          p tunnel
 
           next if tunnel.nil?
           p "process tunnel"
           fileno = fileno_hash[tunnel.fileno]
           mutexes[fileno].synchronize do
-            p "tunnel.puts process"
-            next if tunnel.closed?
             begin
+              p "tunnel.puts process"
+              next if tunnel.closed?
               tunnel.puts(data)
               if IO.select [tunnel], nil, nil, 10
                 p "save socket"
@@ -114,8 +104,9 @@ while true
                   next if datas.empty?
                   data = datas.join
 
-                  if data.start_with?("ping")
+                  if data.chomp.start_with?("ping")
                     tunnel.puts("pong")
+                    p "ping"
                     next
                   end
 
@@ -133,6 +124,7 @@ while true
               end
             rescue StandardError => e
               p e
+              next
             end
           end
           break

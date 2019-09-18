@@ -46,31 +46,40 @@ class ClientModel
   def heatbeat_tunnel
     copy = @tunnels.dup
     copy.each do |fileno, tunnel|
+      next if tunnel.closed?
       p "before ping"
       @mutexes[fileno].synchronize do
 
         last_ping = @ping_history[fileno]
-        if last_ping.nil? || last_ping + 20 > Time.now
-          p "ping"
-          tunnel.puts("ping")
-          next
+        p "last_ping"
+
+        begin
+          if last_ping.nil? || last_ping + 20 > Time.now
+            p "ping"
+            tunnel.puts("ping")
+            next
+          end
+        rescue StandardError => e
+          p e
         end
+
+        p "not ping"
 
         begin
           new_tunnel = TCPSocket.open(REMOTE_ADDR, REMOTE_PORT)
           new_tunnel.puts("tunnel+#{new_tunnel.fileno}+#{fileno}")
-          if IO.select([new_tunnel], nil, nil, 3)
+          if IO.select([new_tunnel], nil, nil, 5)
             p "establish new tunnel"
             next unless new_tunnel.gets.chomp! == "new_tunnel"
 
-            @mutexes.delete(fileno)
             @mutexes[new_tunnel.fileno] = Mutex.new
-            @tunnels.delete(fileno)
             @tunnels[new_tunnel.fileno] = new_tunnel
+            @ping_history[new_tunnel.fileno] = Time.now
             tunnel.close
           end
         rescue StandardError => e
           p e
+          p "error and next in ping thread"
         end
       end
     end
@@ -78,42 +87,56 @@ class ClientModel
 
   def control
     while true
-      datas = []
-      tunnels = IO.select(@tunnels.reject { |fileno, tunnel| tunnel.closed? }.values, nil, nil, 1)
+      begin
+        datas = []
+        p "tunnels"
+        p @tunnels
+        tunnels = IO.select(@tunnels.reject { |fileno, tunnel| tunnel.closed? }.values, nil, nil, 1)
 
-      next if tunnels.nil?
+        next if tunnels.nil?
 
-      tunnel = tunnels[0][0]
-      @mutexes[tunnel.fileno].synchronize do
-        next if tunnel.closed?
-        while IO.select([tunnel], nil, nil, 1)
-          datas << tunnel.gets
-        end
-        next if datas.empty?
-        data = datas.join
-        p data
-
-        if data.chomp == "pong"
-          @tunnels[tunnel.fileno] = tunnel
-          @ping_history[tunnel.fileno] = Time.now
-          p "pong"
-        else
-          if data.start_with?("pong")
-            data.slice!(0, 5)
-          elsif data.end_with?("pong\n")
-            data.slice!(data.size - 5, 5)
+        tunnel = tunnels[0][0]
+        @mutexes[tunnel.fileno].synchronize do
+          next if tunnel.closed?
+          while IO.select([tunnel], nil, nil, 1)
+            datas << tunnel.gets
           end
-
-          p "reformat data"
+          next if datas.empty?
+          data = datas.join
           p data
 
-          if data.start_with?("GET ")
-            proxy(data, tunnel)
+          if data.chomp == "pong"
+            @tunnels[tunnel.fileno] = tunnel
+            @ping_history[tunnel.fileno] = Time.now
+            p "pong"
           else
-            p "invalid"
-            tunnel.puts("invalid request")
+            if data.start_with?("pong")
+              @tunnels[tunnel.fileno] = tunnel
+              @ping_history[tunnel.fileno] = Time.now
+              data.slice!(0, 5)
+            elsif data.end_with?("pong\n")
+              @tunnels[tunnel.fileno] = tunnel
+              @ping_history[tunnel.fileno] = Time.now
+              data.slice!(data.size - 5, 5)
+            end
+
+            p "reformat data"
+            p data
+
+            if data.start_with?("GET ")
+              proxy(data, tunnel)
+            else
+              p "invalid"
+              tunnel.puts("invalid request")
+            end
           end
+          break
         end
+      rescue StandardError => e
+        p e
+        sleep 3
+        p "next loop"
+        next
       end
     end
   end
@@ -133,6 +156,7 @@ class ClientModel
       end
     rescue StandardError => e
       p e
+      p "erro to local"
       @local_host_client.close
       @local_host_client = TCPSocket.open(LOCAL_ADDR, LOCAL_PORT)
       proxy(input, tunnel)
@@ -152,6 +176,7 @@ class ClientModel
       heatbeat_tunnel
     end
   end
+
 end
 
 class Main
@@ -165,6 +190,7 @@ class Main
         client_model.control
       rescue StandardError => e
         p e
+        p "error in main"
         client_model.control
       end
     end
