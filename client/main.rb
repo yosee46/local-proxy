@@ -1,5 +1,4 @@
 require "socket"
-require "yaml"
 require 'optparse'
 require "./client/tunnel"
 require "./utils/logger"

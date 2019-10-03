@@ -1,3 +1,5 @@
+require 'yaml'
+
 module Utils
   class << self
     attr_accessor :config_loader

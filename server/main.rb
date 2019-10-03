@@ -1,5 +1,8 @@
 require "socket"
 require 'thread'
+require 'optparse'
+require "./utils/logger"
+require "./utils/config_loader"
 
 module Server
 
@@ -141,8 +144,7 @@ module Server
   class Main
 
     def main
-      port = 80
-      server = TCPServer.open(port)
+      server = TCPServer.open(@host, @port)
       server_model = ServerModel.new
 
       Thread.start { server_model.ping_pong }
@@ -156,10 +158,20 @@ module Server
     end
 
     def load_config
-
+      @host = Utils.config_loader.config['host']
+      @port = Utils.config_loader.config['port']
     end
   end
 end
 
+opt = OptionParser.new
+config_file_path = nil
+opt.on('-c', '--config_path STRING') {|v| config_file_path = v }
+opt.parse(ARGV)
+
+Utils.config_loader = Utils::ConfigLoader.new(Utils::ENV::SERVER, config_file_path)
+
 Utils.log = Utils::Logger.new
+Utils.log.debug(Utils.config_loader.config)
+
 Server::Main.new.main
