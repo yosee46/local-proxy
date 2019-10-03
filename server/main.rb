@@ -142,8 +142,8 @@ module Server
   end
 
   class Main
-
     def main
+      load_config
       server = TCPServer.open(@host, @port)
       server_model = ServerModel.new
 
