@@ -1,0 +1,12 @@
+client:
+  remote_host: "localhost"
+  remote_port: 80
+  local_host: "localhost"
+  local_port: 8080
+  tunnel_thread_num: 1
+  log_level: 'info'
+  log_file_path: '/tmp/local-proxy.log'
+
+sever:
+  local_host: "localhost"
+  local_port: 80
