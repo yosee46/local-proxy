@@ -1,6 +1,8 @@
+require "socket"
+
 module Server
   class Tunnel
-    attr_accessor :socket, :mutex, :tunnel_hash_index, @proxy_dest_socket
+    attr_accessor :socket, :mutex, :tunnel_hash_index, :proxy_dest_socket
 
     CONNECTION_DEADL_IN_SEC = 20
 
