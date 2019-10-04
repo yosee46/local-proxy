@@ -1,4 +1,5 @@
 require "socket"
+require "./utils/consts"
 
 module Server
   class Tunnel
@@ -6,16 +7,7 @@ module Server
 
     CONNECTION_DEADL_IN_SEC = 20
 
-    def initialize(socket, data)
-      array = data.chomp!.split('+')
-      tunnel_hash_index = array[1]
-      old_fileno = array[2]
-
-      unless old_fileno.nil?
-        old_tunnel = @tunnels[old_fileno]
-        old_tunnel.close unless old_tunnel.nil?
-      end
-
+    def initialize(socket, tunnel_hash_index)
       @socket = socket
       @tunnel_hash_index = tunnel_hash_index
       @mutex = Mutex.new

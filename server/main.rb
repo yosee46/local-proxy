@@ -46,7 +46,16 @@ module Server
 
         if data.start_with?("tunnel")
           Utils.log.debug("accept tunnel")
-          new_tunnel = Tunnel.new(socket, data)
+          array = data.chomp!.split('+')
+          tunnel_hash_index = array[1]
+          old_fileno = array[2]
+
+          unless old_fileno.nil?
+            old_tunnel = @tunnels.find {|tunnel| tunnel.fileno == old_fileno}
+            old_tunnel.close unless old_tunnel.nil?
+          end
+
+          new_tunnel = Tunnel.new(socket, tunnel_hash_index)
           @tunnels[new_tunnel.tunnel_hash_index] = new_tunnel
 
         elsif data.start_with?("GET ") and !data.start_with?("GET /nginx_status")
