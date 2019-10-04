@@ -38,7 +38,7 @@ module Server
           Utils.log.debug("tunnel_no:%d old tunnel close" % fileno)
           old_tunnel.close
         rescue StandardError => e
-          Utils.log.error(e.message)
+          Utils.log.error(e)
         end
       end
     end
@@ -90,7 +90,7 @@ module Server
                 next
               end
 
-              data = data.gsub(/#{Utils::Consts::PING}/, "")
+              data = data.gsub(/\*\*ping\*\*/, "")
               @proxy_dest_socket.puts(data)
               Utils.log.debug("tunnel_no:%d proxy data to client server" % fileno)
 
@@ -104,7 +104,7 @@ module Server
             Utils.log.debug("tunnel_no:%d url socket close" % fileno)
           end
         rescue StandardError => e
-          Utils.log.error(e.message)
+          Utils.log.error(e)
           return false
         end
         true

@@ -25,7 +25,7 @@ module Server
             tunnel.ping_pong unless tunnel.nil?
           end
         rescue StandardError => e
-          Utils.log.error(e.message)
+          Utils.log.error(e)
         end
       end
     end
@@ -63,7 +63,7 @@ module Server
 
         end
       rescue StandardError => e
-        Utils.log.error(e.message)
+        Utils.log.error(e)
       end
 
     end
