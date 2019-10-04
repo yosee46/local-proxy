@@ -78,8 +78,7 @@ module Client
     def control
       loop do
         begin
-          Utils.log.debug("start tunnels")
-          Utils.log.debug(@tunnels.inspect)
+          Utils.log.debug("start control loop")
           sockets = IO.select(@tunnels.reject { |fileno, tunnel| tunnel.closed? || tunnel.busy }.values.map { |tunnel| tunnel.socket }, nil, nil, 1)
 
           next if sockets.nil?
@@ -88,11 +87,12 @@ module Client
           tunnel = @tunnels[socket.fileno]
 
           Thread.start {
-            tunnel.dispatch do |data|
+            tunnel.proxy_dispatch do |data|
               if data.start_with?("GET ")
                 proxy(data, tunnel)
               else
-                Utils.log.debug("invalid request")
+                Utils.log.warn("invalid request")
+                Utils.log.warn(data)
                 tunnel.puts("invalid request")
               end
             end

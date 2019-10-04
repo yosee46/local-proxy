@@ -28,10 +28,11 @@ module Server
             end
             next if datas.empty?
             data = datas.join
+            Utils.log.debug("accept ping")
 
-            if data.chomp.start_with?("ping")
+            if data.chomp.start_with?("**ping**")
               Utils.log.debug("accept ping")
-              tunnel.puts("pong")
+              tunnel.puts("**pong**")
               Utils.log.debug("retun pong")
             end
           end
@@ -108,12 +109,13 @@ module Server
                     next if datas.empty?
                     data = datas.join
 
-                    if data.chomp.start_with?("ping")
-                      tunnel.puts("pong")
+                    if data.chomp.start_with?("**ping**")
+                      tunnel.puts("**pong**")
                       Utils.log.debug("ping process")
                       next
                     end
 
+                    data = data.gsub(/\*\*ping\*\*/, "")
                     socket.puts(data)
                     Utils.log.debug("proxy data to client server")
 
@@ -144,7 +146,7 @@ module Server
   class Main
     def main
       load_config
-      server = TCPServer.open(@host, @port)
+      server = TCPServer.open(@port)
       server_model = ServerModel.new
 
       Thread.start { server_model.ping_pong }
@@ -158,7 +160,6 @@ module Server
     end
 
     def load_config
-      @host = Utils.config_loader.config['host']
       @port = Utils.config_loader.config['port']
     end
   end
