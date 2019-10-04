@@ -99,10 +99,10 @@ module Client
           else
             if data.start_with?(Utils::Consts::PONG)
               ping_timestamp
-              data.slice!(0, 5)
+              data.slice!(0, Utils::Consts::PONG.length+1)
             elsif data.end_with?(Utils::Consts::PONG + "\n")
               ping_timestamp
-              data.slice!(data.size - 5, 5)
+              data.slice!(data.size - Utils::Consts::PONG.length+1, Utils::Consts::PONG.length+1)
             end
 
             Utils.log.debug("tunnel_no:%d reformatted data" % fileno)
