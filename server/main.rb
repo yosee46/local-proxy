@@ -1,6 +1,7 @@
 require "socket"
 require 'thread'
 require 'optparse'
+require "./server/tunnel"
 require "./utils/logger"
 require "./utils/config_loader"
 
