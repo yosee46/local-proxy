@@ -8,7 +8,6 @@ client:
   log_file_path: '/tmp/client-local-proxy.log'
 
 server:
-  host: "localhost"
   port: 80
   log_level: 'info'
   log_file_path: '/tmp/server-local-proxy.log'

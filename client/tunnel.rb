@@ -35,12 +35,12 @@ module Client
 
     def heartbeat(&func)
       return if closed?
-      Utils.log.debug("start ping process")
+      Utils.log.debug("tunnel_no:%d start ping process" % @socket.fileno)
       @mutex.synchronize do
         begin
           if @last_pinged.nil? || @last_pinged + CONNECTION_DEADL_IN_SEC > Time.now
-            Utils.log.debug("ping request")
-            puts("ping")
+            Utils.log.debug("tunnel_no:%d ping request" % @socket.fileno)
+            puts("**ping**")
             return
           end
         rescue StandardError => e
@@ -55,9 +55,9 @@ module Client
     def proxy (input)
       datas = []
       begin
-        Utils.log.debug("start tunnel proxy")
-        Utils.log.debug(input)
-        Utils.log.debug(@local_host_client.inspect)
+        Utils.log.debug("tunnel_no:%d start tunnel proxy" % @socket.fileno)
+        Utils.log.debug("tunnel_no:%d " % @socket.fileno + input)
+        Utils.log.debug("tunnel_no:%d " % @socket.fileno + @local_host_client.inspect)
         @local_host_client.write(input)
 
         # I do not know why IO.select makes this code slower
@@ -68,18 +68,19 @@ module Client
           end
           datas << buffer
         end
-        Utils.log.debug("get data in tunnel proxy")
+        Utils.log.debug("tunnel_no:%d get data in tunnel proxy" % @socket.fileno)
       rescue StandardError => e
         Utils.log.error(e.message)
         Utils.log.error(e.backtrace)
         @local_host_client.close
       end
       data = datas.join
-      Utils.log.debug(data)
+      Utils.log.debug("tunnel_no:%d " % @socket.fileno + data)
       puts(data)
     end
 
-    def dispatch(&func)
+    def proxy_dispatch(&func)
+      Utils.log.debug("tunnel_no:%d start proxy dispatch" % @socket.fileno)
       begin
         @busy = true
         @mutex.synchronize do
@@ -91,22 +92,22 @@ module Client
           end
           next if datas.empty?
           data = datas.join
-          Utils.log.debug(data)
+          Utils.log.debug("tunnel_no:%d " % @socket.fileno + data)
 
-          if data.chomp == "pong"
+          if data.chomp == "**pong**"
             ping_timestamp
-            Utils.log.debug("accept pong")
+            Utils.log.debug("tunnel_no:%d accept pong" % @socket.fileno)
           else
-            if data.start_with?("pong")
+            if data.start_with?("**pong**")
               ping_timestamp
               data.slice!(0, 5)
-            elsif data.end_with?("pong\n")
+            elsif data.end_with?("**pong**\n")
               ping_timestamp
               data.slice!(data.size - 5, 5)
             end
 
-            Utils.log.debug("reformatted data")
-            Utils.log.debug(data)
+            Utils.log.debug("tunnel_no:%d reformatted data" % @socket.fileno)
+            Utils.log.debug("tunnel_no:%d " % @socket.fileno + data)
 
             func.call(data)
           end
@@ -115,7 +116,6 @@ module Client
         @busy = false
       end
     end
-
   end
 end
 
