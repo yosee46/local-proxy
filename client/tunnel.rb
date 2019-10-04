@@ -1,4 +1,5 @@
 require "socket"
+require "./utils/consts"
 
 module Client
   class Tunnel
@@ -40,12 +41,11 @@ module Client
         begin
           if @last_pinged.nil? || @last_pinged + CONNECTION_DEADL_IN_SEC > Time.now
             Utils.log.debug("tunnel_no:%d ping request" % fileno)
-            puts(Utils::Consts::Ping)
+            puts(Utils::Consts::PING)
             return
           end
         rescue StandardError => e
-          Utils.log.error(e.message)
-          Utils.log.error(e.backtrace)
+          Utils.log.error(e)
         end
 
         func.call
@@ -70,8 +70,7 @@ module Client
         end
         Utils.log.debug("tunnel_no:%d get data in tunnel proxy" % fileno)
       rescue StandardError => e
-        Utils.log.error(e.message)
-        Utils.log.error(e.backtrace)
+        Utils.log.error(e)
         @local_host_client.close
       end
       data = datas.join

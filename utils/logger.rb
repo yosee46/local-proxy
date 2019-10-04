@@ -39,13 +39,16 @@ module Utils
     end
 
     def warn(message)
-      @log_file.info(message)
-      @log.info(message)
+      @log_file.warn(message)
+      @log.warn(message)
     end
 
-    def error (message)
-      @log_file.info(message)
-      @log.info(message)
+    def error (e)
+      @log_file.error(e.message)
+      @log_file.error(e.backtrace)
+
+      @log.error(e.message)
+      @log.error(e.backtrace)
     end
   end
 

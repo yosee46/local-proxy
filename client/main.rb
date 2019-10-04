@@ -17,8 +17,7 @@ module Client
         begin
           client_model.control
         rescue StandardError => e
-          Utils.log.error(e.message)
-          Utils.log.error(e.backtrace)
+          Utils.log.error(e)
           client_model.control
         end
       end
@@ -68,8 +67,7 @@ module Client
               tunnel.close
             end
           rescue StandardError => e
-            Utils.log.error(e.message)
-            Utils.log.error(e.backtrace)
+            Utils.log.error(e)
           end
         end
       end
@@ -99,8 +97,7 @@ module Client
           }.join
 
         rescue StandardError => e
-          Utils.log.error(e.message)
-          Utils.log.error(e.backtrace)
+          Utils.log.error(e)
           sleep 3
           next
         end
@@ -112,8 +109,7 @@ module Client
       begin
         tunnel.proxy(input)
       rescue StandardError => e
-        Utils.log.error(e.message)
-        Utils.log.error(e.backtrace)
+        Utils.log.error(e)
         #proxy(input, tunnel)
       ensure
         tunnel.local_host_client.close
