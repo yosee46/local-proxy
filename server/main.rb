@@ -48,10 +48,10 @@ module Server
           Utils.log.debug("accept tunnel")
           array = data.chomp!.split('+')
           tunnel_hash_index = array[1]
-          old_fileno = array[2]
+          old_tunnel_hash_fileno = array[2]
 
-          unless old_fileno.nil?
-            old_tunnel = @tunnels.find {|tunnel| tunnel.fileno == old_fileno}
+          unless old_tunnel_hash_fileno.nil?
+            old_tunnel = @tunnels[old_tunnel_hash_fileno]
             old_tunnel.close unless old_tunnel.nil?
           end
 
