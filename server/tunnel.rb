@@ -91,9 +91,10 @@ module Server
             end
 
           else
-            @proxy_dest_socket.puts(data)
+            @proxy_dest_socket.puts(input)
             @proxy_dest_socket.close()
-            Utils.log.debug("tunnel_no:%d url socket close" % fileno)
+            Utils.log.error("tunnel_no:%d url socket close" % fileno)
+            Utils.log.error(input)
           end
         rescue StandardError => e
           Utils.log.error(e)
