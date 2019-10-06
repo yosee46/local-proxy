@@ -31,7 +31,7 @@ module Server
     end
 
     def find_tunnel(socket)
-      @tunnels.each do |fileno, tunnel|
+      @tunnels.each..reject { |fileno, tunnel| tunnel.closed? }.values.each do |tunnel|
         return tunnel if socket.fileno == tunnel.socket.fileno
       end
     end
