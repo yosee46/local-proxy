@@ -28,7 +28,7 @@ module Server
       @mutex.synchronize do
         begin
           Utils.log.debug("tunnel_no:%d old tunnel close" % fileno)
-          old_tunnel.close
+          @socket.close
         rescue StandardError => e
           Utils.log.error(e)
         end
